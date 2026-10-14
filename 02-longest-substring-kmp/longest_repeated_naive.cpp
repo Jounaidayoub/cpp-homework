@@ -29,6 +29,15 @@ RepeatResult longestRepeatedNaive(const std::string &s) {
     return best;
 }
 
+std::string readFile(const std::string &path) {
+    std::ifstream f(path, std::ios::binary);
+    if (!f.is_open())
+        throw std::runtime_error("Cannot open file: " + path);
+    std::ostringstream ss;
+    ss << f.rdbuf();
+    return ss.str();
+}
+
 static int runDemo() {
     struct Case { std::string text, expected; };
     Case cases[] = {
@@ -49,17 +58,16 @@ static int runDemo() {
     return 0;
 }
 
-static int runFile(const char *path, std::size_t maxChars) {
-    std::ifstream f(path, std::ios::binary);
-    if (!f.is_open()) {
-        std::cerr << "Cannot open file: " << path << std::endl;
+static int runFile(const std::string &path, std::size_t limit) {
+    std::string s;
+    try {
+        s = readFile(path);
+    } catch (const std::exception &e) {
+        std::cerr << e.what() << std::endl;
         return 1;
     }
-    std::ostringstream ss;
-    ss << f.rdbuf();
-    std::string s = ss.str();
-    if (s.size() > maxChars)
-        s.resize(maxChars);
+    if (limit > 0 && s.size() > limit)
+        s.resize(limit);
     auto t0 = std::chrono::high_resolution_clock::now();
     RepeatResult r = longestRepeatedNaive(s);
     auto t1 = std::chrono::high_resolution_clock::now();
@@ -71,11 +79,27 @@ static int runFile(const char *path, std::size_t maxChars) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc >= 2) {
-        std::size_t maxChars = 4000;
-        if (argc >= 3)
-            maxChars = (std::size_t)std::stoul(argv[2]);
-        return runFile(argv[1], maxChars);
+    if (argc == 1)
+        return runDemo();
+    std::string path;
+    std::size_t limit = 0;
+    for (int i = 1; i < argc; i++) {
+        std::string a = argv[i];
+        if (a == "--limit" && i + 1 < argc)
+            limit = (std::size_t)std::stoul(argv[++i]);
+        else if (a.rfind("--", 0) == 0) {
+            std::cerr << "Unknown flag: " << a << std::endl;
+            return 1;
+        } else if (path.empty())
+            path = a;
+        else {
+            std::cerr << "Usage: " << argv[0] << " [file [--limit N]]" << std::endl;
+            return 1;
+        }
     }
-    return runDemo();
+    if (path.empty()) {
+        std::cerr << "Usage: " << argv[0] << " [file [--limit N]]" << std::endl;
+        return 1;
+    }
+    return runFile(path, limit);
 }
