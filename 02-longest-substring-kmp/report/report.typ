@@ -4,28 +4,28 @@
 #show raw: set text(font: "DejaVu Sans Mono", size: 8pt)
 
 #align(center)[
-  #text(size: 20pt, weight: "bold")[Plus longue sous-chaîne commune (naïf) + recherche KMP]
+  #text(size: 20pt, weight: "bold")[Plus longue sous-chaîne répétée (naïf) + recherche KMP]
   #v(4pt)
-  #text(size: 12pt)[LCS naïf #h(8pt) | Recherche de motif de Knuth-Morris-Pratt]
+  #text(size: 12pt)[Répétition naïve #h(8pt) | Recherche de motif de Knuth-Morris-Pratt]
   #v(2pt)
-  #text(size: 10pt, fill: gray)[longest_common_naive.cpp #h(8pt) | kmp_search.cpp #h(8pt) | vérifié par exécution, `g++ -O2 -Wall`]
+  #text(size: 10pt, fill: gray)[longest_repeated_naive.cpp #h(8pt) | kmp_search.cpp #h(8pt) | vérifié par exécution, `g++ -O2 -Wall`]
 ]
 
 = Objectif
 
-Étant données deux chaînes, résoudre deux problèmes liés :
+Étant donnés un texte et un motif, résoudre deux problèmes liés :
 
-1. *Plus longue sous-chaîne commune* : trouver le plus long bloc contigu partagé par les chaînes `a` et `b`.
+1. *Plus longue sous-chaîne répétée* : trouver dans UN seul texte `s` le plus long bloc qui apparaît au moins deux fois (par exemple une phrase répétée dans un livre). Les chevauchements sont autorisés.
 2. *Recherche de motif (KMP)* : trouver toutes les occurrences d'un motif `pat` dans un texte `txt`, chevauchements inclus, en temps linéaire.
 
 Résultats de référence (les deux programmes ont été exécutés localement) :
 
-- `"abcdef"` vs `"zabcde"` $arrow$ `"abcde"` (len 5)
-- `"computer"` vs `"commuter"` $arrow$ `"uter"` (len 4)
+- `"banana"` $arrow$ `"ana"` (len 3, en 1 et 3)
+- `"the cat sat. the dog ran. the cat sat."` $arrow$ `"the cat sat."` (len 12, en 0 et 26)
 - `"ABABDABACDABABCABAB"` recherche `"ABABCABAB"` $arrow$ 1 occurrence à l'indice 10
 - `"aaaaa"` recherche `"aaa"` $arrow$ occurrences en 0, 1, 2 (chevauchements inclus)
 
-= Plus longue sous-chaîne commune (méthode naïve)
+= Plus longue sous-chaîne répétée (méthode naïve)
 
 #grid(
   columns: (1fr, 1fr),
@@ -34,39 +34,39 @@ Résultats de référence (les deux programmes ont été exécutés localement) 
     #text(weight: "bold")[Signature]
     #v(4pt)
     ```cpp
-    LCSResult longestCommonSubstringNaive(
-        const string &a, const string &b)
+    RepeatResult longestRepeatedNaive(
+        const string &s)
     ```
     #v(4pt)
-    Retourne le plus long bloc partagé avec sa longueur et ses positions de départ dans `a` et `b`. Entrée vide $arrow$ résultat vide.
+    Retourne le plus long bloc apparaissant au moins deux fois dans `s`, avec sa longueur et ses deux positions de départ. Texte vide $arrow$ résultat vide.
   ]],
   [#block(fill: rgb("#eef6ff"), radius: 6pt, inset: 10pt)[
     #text(weight: "bold")[Idée en 3 points]
     #v(4pt)
-    1. Essayer chaque paire de départ `(i, j)`.
+    1. Essayer chaque paire de départ `(i, j)` avec `j > i`.
     #v(2pt)
-    2. Étendre `k` tant que `a[i+k] == b[j+k]`.
+    2. Étendre `k` tant que `s[i+k] == s[j+k]`.
     #v(2pt)
-    3. Garder le meilleur triplet vu jusqu'ici.
+    3. Garder le meilleur quadruplet vu jusqu'ici.
     #v(4pt)
-    Aucun prétraitement, aucune mémoire supplémentaire.
+    Aucun prétraitement, aucune mémoire supplémentaire. Chevauchements autorisés (`"aaaa"` $arrow$ `"aaa"`).
   ]],
 )
 
-#text(size: 9pt, fill: gray)[Fonction testée telle quelle depuis `longest_common_naive.cpp:15`.]
+#text(size: 9pt, fill: gray)[Fonction testée telle quelle depuis `longest_repeated_naive.cpp:19`.]
 ```cpp
-LCSResult longestCommonSubstringNaive(const string &a, const string &b) {
-    LCSResult best;
-    for (size_t i = 0; i < a.size(); i++) {
-        for (size_t j = 0; j < b.size(); j++) {
+RepeatResult longestRepeatedNaive(const string &s) {
+    RepeatResult best;
+    for (size_t i = 0; i < s.size(); i++) {
+        for (size_t j = i + 1; j < s.size(); j++) {
             size_t k = 0;
-            while (i + k < a.size() && j + k < b.size() && a[i + k] == b[j + k])
+            while (j + k < s.size() && s[i + k] == s[j + k])
                 k++;
             if (k > best.len) {
                 best.len = k;
                 best.posA = i;
                 best.posB = j;
-                best.value = a.substr(i, k);
+                best.value = s.substr(i, k);
             }
         }
     }
@@ -74,39 +74,41 @@ LCSResult longestCommonSubstringNaive(const string &a, const string &b) {
 }
 ```
 
-Exemple détaillé : `a = "computer"`, `b = "commuter"`. Paires de départ sélectionnées :
+Exemple détaillé : `s = "banana"`. Paires de départ sélectionnées :
 
 #table(
   columns: (auto, auto, 1fr, auto),
-  fill: (col, row) => if row == 0 { rgb("#1f2937") } else if row == 3 { rgb("#ecfdf5") },
+  fill: (col, row) => if row == 0 { rgb("#1f2937") } else if row == 2 { rgb("#ecfdf5") },
   align: center,
-  table.header[#text(white)[*(i, j)*]][#text(white)[*a[i] / b[j]*]][#text(white)[*extension*]][#text(white)[*len*]],
-  [(0, 0)], [c / c], [`com`, puis `p` vs `m` arrête], [3],
-  [(3, 3)], [p / m], [pas de correspondance], [0],
-  [(4, 4)], [u / u], [`uter`, meilleur], [4],
-  [(5, 5)], [t / t], [`ter`], [3],
-  [(7, 7)], [r / r], [`r`], [1],
+  table.header[#text(white)[*(i, j)*]][#text(white)[*s[i] / s[j]*]][#text(white)[*extension*]][#text(white)[*len*]],
+  [(0, 1)], [b / a], [pas de correspondance (`b` ne se répète jamais)], [0],
+  [(1, 3)], [a / a], [`ana`, meilleur], [3],
+  [(2, 4)], [n / n], [`na`], [2],
+  [(3, 5)], [a / a], [`a`], [1],
 )
 
-Lecture : la paire (0, 0) construit `"com"` (len 3) ; la paire (4, 4) construit `"uter"` (len 4) et devient la meilleure. Les autres paires ne la battent jamais, donc la réponse est `"uter"`.
+Lecture : la paire (0, 1) échoue car `b` ne se répète jamais ; la paire (1, 3) construit `"ana"` (len 3) et devient la meilleure. Les paires suivantes (`"na"`, `"a"`) ne la battent pas, donc la réponse est `"ana"` (en 1 et 3).
+
+Exemple grandeur nature : `"the cat sat. the dog ran. the cat sat."` $arrow$ `"the cat sat."` (len 12, en 0 et 26) : la phrase entière répétée est détectée telle quelle.
 
 #block(fill: rgb("#fffbeb"), radius: 6pt, inset: 10pt, stroke: 1pt + rgb("#f59e0b"))[
-  #text(weight: "bold")[Complexité] : double boucle sur `n fois m` paires, chaque extension jusqu'à `L` $arrow$ temps $O(n dot m dot L)$, mémoire supplémentaire `O(1)`.
-  Les chaînes aléatoires coïncident rarement donc les extensions restent courtes ; les entrées en `"a"` répété sont le pire cas (section 3, tableau B).
+  #text(weight: "bold")[Complexité] : double boucle sur les paires `(i, j)` avec `j > i`, chaque extension jusqu'à `L` $arrow$ temps $O(n^2 dot L)$, mémoire supplémentaire `O(1)`.
+  Sur texte aléatoire l'extension casse vite ; le pire cas (`"a"` répété) allonge chaque extension — mais le nombre de paires domine déjà (section 4, tableau A).
 ]
 
-Sorties de démonstration vérifiées (`longest_common_naive.cpp:33`):
+Sorties de démonstration vérifiées (`longest_repeated_naive.cpp:37`):
 
 #table(
   columns: (1fr, 1fr, auto),
   fill: (col, row) => if row == 0 { rgb("#1f2937") },
   align: left,
-  table.header[#text(white)[*Entrée (a / b)*]][#text(white)[*Sortie*]][#text(white)[*Statut*]],
-  [`abcdef` / `zabcde`], [`"abcde"` (len 5)], [#text(fill: rgb("#15803d"))[OK]],
-  [`computer` / `commuter`], [`"uter"` (len 4)], [#text(fill: rgb("#15803d"))[OK]],
-  [`hello` / `world`], [`"l"` (len 1)], [#text(fill: rgb("#15803d"))[OK]],
-  [`abc` / `xyz`], [`""` (len 0)], [#text(fill: rgb("#15803d"))[OK]],
-  [`""` / `abc`], [`""` (len 0)], [#text(fill: rgb("#15803d"))[OK]],
+  table.header[#text(white)[*Entrée (`s`)*]][#text(white)[*Sortie*]][#text(white)[*Statut*]],
+  [`banana`], [`"ana"` (len 3, en 1 et 3)], [#text(fill: rgb("#15803d"))[OK]],
+  [`abcdabc`], [`"abc"` (len 3, en 0 et 4)], [#text(fill: rgb("#15803d"))[OK]],
+  [`aaaa`], [`"aaa"` (len 3, en 0 et 1)], [#text(fill: rgb("#15803d"))[OK]],
+  [`abcdef`], [`""` (len 0)], [#text(fill: rgb("#15803d"))[OK]],
+  [`""`], [`""` (len 0)], [#text(fill: rgb("#15803d"))[OK]],
+  [`the cat sat. the dog ran. the cat sat.`], [`"the cat sat."` (len 12, en 0 et 26)], [#text(fill: rgb("#15803d"))[OK]],
 )
 
 = Recherche de motif de Knuth-Morris-Pratt
@@ -219,43 +221,35 @@ Vérification du chevauchement : `txt = "aaaaa"`, `pat = "aaa"` $arrow$ occurren
 
 = Mesures de performance
 
-Tous les chiffres ont été mesurés localement avec `g++ -O2`. Mesures suivies : temps écoulé, nombre de comparaisons de caractères, mémoire supplémentaire et comportement dans le pire cas.
+Machine : `g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0`, drapeau `-O2`, CPU Intel Core i7-8665U à 1,90 GHz.
+Chaque mesure est répétée 3 fois et le meilleur temps est gardé (livre entier : 1 seul passage).
+Le programme n'affiche pas de compteur de comparaisons : seuls le temps, la longueur et la répétition trouvée sont reportés.
 
 #block(fill: rgb("#f4f4f5"), radius: 6pt, inset: 10pt)[
-  #text(weight: "bold")[Mesures en bref] : le temps montre l'échelle ; le nombre de comparaisons l'explique ; la mémoire est `O(1)` supplémentaire pour le LCS naïf contre `O(m)` pour la table LPS ;
-  le pire cas est cubique pour le LCS naïf sur caractères répétés mais d'au plus `2n` comparaisons pour la recherche KMP.
+  #text(weight: "bold")[Mesures en bref] : le temps montre l'échelle ; la mémoire est `O(1)` supplémentaire pour la répétition naïve contre `O(m)` pour la table LPS ;
+  le nombre de paires rend la méthode naïve quadratique (tableau A) tandis que la recherche KMP reste bornée par `2n` comparaisons.
 ]
 
-Tableau A — LCS naïf, chaînes aléatoires partageant un bloc de 20 caractères (cas moyen) :
+Tableau A — répétition naïve sur Alice au pays des merveilles (`alice_story.txt`, texte du Projet Gutenberg, préfixes de N caractères) :
 
 #table(
-  columns: (auto, auto, auto),
+  columns: (auto, auto, 1fr),
   fill: (col, row) => if row == 0 { rgb("#1f2937") },
-  align: center,
-  table.header[#text(white)[*n*]][#text(white)[*temps*]][#text(white)[*comparaisons*]],
-  [100], [0.07 ms], [13k],
-  [500], [1.42 ms], [262k],
-  [1000], [5.71 ms], [1.04M],
-  [2000], [22.6 ms], [4.16M],
+  align: left,
+  table.header[#text(white)[*N*]][#text(white)[*temps (meilleur de 3)*]][#text(white)[*répétition trouvée*]],
+  [2000], [6,7 ms], [len 21 en 15 et 483 : `"Down the Rabbit-Hole"`],
+  [4000], [26,9 ms], [len 21, idem],
+  [8000], [108 ms], [len 21, idem],
+  [16000], [442 ms], [len 136 en 9173 et 12116 : ornement `"* * *"`],
+  [32000], [1079 ms], [len 136, idem],
+  [162949 (livre entier, 1 passage)], [27,4 s], [len 145 en 118654 et 119452 : refrain `"Will you, won't you..."`],
 )
 
-Lecture : le temps est multiplié par 4 environ quand `n` double (0.07 $arrow$ 1.42 $arrow$ 5.71 $arrow$ 22.6 ms) et les comparaisons suivent $n^2$, la courbe quadratique attendue pour une entrée aléatoire.
+Lecture : le temps est multiplié par 4 environ quand `N` double (6,7 $arrow$ 26,9 $arrow$ 108 $arrow$ 442 ms, rapports 4,0 / 4,0 / 4,1) : le nombre de paires domine et l'extension casse vite sur texte courant.
+La dernière marche (442 $arrow$ 1079 ms, rapport 2,4) a capté un moment creux sur une machine partagée ; la tendance reste clairement quadratique.
+Le livre entier (162949 caractères) prend 27,4 s et révèle le refrain de la chanson (len 145) : le $O(n^2)$ naïf est infaisable en pratique courante — cela motive les méthodes linéaires (tableau des suffixes, automate), hors sujet ici.
 
-Tableau B — LCS naïf, pire cas, `"a" * n` contre `"a" * n` :
-
-#table(
-  columns: (auto, auto, auto),
-  fill: (col, row) => if row == 0 { rgb("#1f2937") },
-  align: center,
-  table.header[#text(white)[*n*]][#text(white)[*temps*]][#text(white)[*comparaisons*]],
-  [200], [7.8 ms], [2.7M],
-  [500], [118 ms], [41.8M],
-  [1000], [577 ms], [334M],
-)
-
-Lecture : chaque paire correspond sur une longue plage, donc la boucle d'extension explose : 2.7M $arrow$ 41.8M $arrow$ 334M comparaisons. Cette explosion cubique explique pourquoi la méthode naïve ne convient qu'aux petites entrées.
-
-Tableau C — recherche KMP contre recherche naïve :
+Tableau B — recherche KMP contre recherche naïve :
 
 #table(
   columns: (1fr, auto, auto),
@@ -273,7 +267,7 @@ Lecture : sur l'entrée adverse, le balayage naïf revérifie chaque décalage (
 
 = Conclusion et sources
 
-Le LCS naïf est court, évidemment correct et adapté aux petites chaînes, mais son temps en $O(n dot m dot L)$ devient cubique sur entrée répétitive (577 ms pour `n = 1000`). KMP paie une mémoire en `O(m)` pour la table LPS et obtient une recherche linéaire avec au plus `2n` comparaisons, divisant environ par deux le travail du balayage naïf sur les entrées adverses et volumineuses. Règle pratique : naïf pour la clarté et les minuscules entrées, KMP dès que le texte est grand ou que le motif se chevauche lui-même.
+La répétition naïve est courte, évidemment correcte et adaptée aux petits textes, mais son temps en $O(n^2 dot L)$ devient impraticable sur grand texte (1079 ms pour `N = 32000`, 27,4 s sur le livre entier de 162949 caractères). KMP paie une mémoire en `O(m)` pour la table LPS et obtient une recherche linéaire avec au plus `2n` comparaisons, divisant environ par deux le travail du balayage naïf sur les entrées adverses et volumineuses. Règle pratique : naïf pour la clarté et les minuscules entrées, KMP dès que le texte est grand ou que le motif se chevauche lui-même.
 
 Sources :
 
