@@ -27,8 +27,7 @@
   manuellement avec le conteneur standard `std::map<int, int>`. Les deux
   structures reçoivent la même permutation reproductible de 200 000 entiers
   distincts. Trois opérations sont mesurées séparément : insertion, recherche
-   puis suppression. Sur la mesure finale, l'ABR est plus rapide pour les trois
-   opérations. Le résultat principal est surtout algorithmique : l'ABR personnel
+   puis suppression. Les nouvelles mesures figurent à la fin du rapport ; les résultats varient selon l’opération. Le résultat principal est surtout algorithmique : l'ABR personnel
    n'offre pas de garantie logarithmique dans le pire cas, contrairement à
    `std::map`.
 ]
@@ -204,9 +203,9 @@ for (int value : values)
     control += dictionary.erase(value);
 ```
 
-= Résultats de performance
+= Résultats précédents de performance
 
-Machine de mesure : Intel Core i7-8665U à 1,90 GHz, 8 processeurs logiques,
+Machine de la mesure précédente : Intel Core i7-8665U à 1,90 GHz, 8 processeurs logiques,
 Ubuntu Linux x86_64. Compilation : `g++ -O2 -Wall -Wextra -pedantic`.
 La commande finale a été fixée au processeur logique 0 avec `taskset -c 0`.
 
@@ -282,8 +281,7 @@ où un comportement ou un parcours personnalisé est recherché.
 = Conclusion
 
 Les deux structures réalisent correctement l'insertion, la recherche et la
-suppression des mêmes clés. Sur 200 000 valeurs mélangées, l'ABR obtient les
-trois meilleurs temps dans cette exécution. Ce résultat de temps ne supprime
+suppression des mêmes clés. Les résultats précédents correspondent à une autre exécution ; les nouvelles mesures sont détaillées à la fin du rapport. Ce résultat de temps ne supprime
 toutefois pas l'avantage théorique de `std::map` : sa complexité logarithmique
 est garantie, alors que celle de l'ABR dépend de sa forme.
 
@@ -299,3 +297,39 @@ une solution standard et robuste pour un programme C++ réel.
     Source et mesures : `03-arbre-binaire-recherche/bst.cpp` · graine `2026`
   ]
 ]
+
+#pagebreak()
+= Nouvelles mesures locales
+
+Mesures effectuées à nouveau sur Intel Core i7-8665U à 1,90 GHz, 4 cœurs / 8 processeurs logiques, 14 Gio de RAM, Ubuntu Linux x86_64 (noyau 7.0.0-38-generic). Compilateur g++ 15.2.0, options -std=c++17 -O2 -Wall -Wextra -pedantic. Aucune affinité processeur imposée. Les valeurs ci-dessous remplacent les anciens résultats pour cette exécution et correspondent à benchmark-nouveau.csv.
+
+Moyennes de trois exécutions sur 200 000 clés, graine 2026, en microsecondes. Le contrôle vaut 1 200 000 pour chaque structure.
+
+#table(columns: (1fr, 1fr, 1fr), table.header[*Opération*][*ABR*][*std.map*],
+[Insertion], [112715.02], [96133.59],
+[Recherche], [51058.05], [100791.95],
+[Suppression], [81576.88], [103489.85],
+)
+
+L’ordre d’insertion modifie fortement la hauteur. La mesure suivante utilise 5 000 clés, trois répétitions et la graine 2026 ; le cas presque trié effectue 50 échanges. Les recherches puis suppressions suivent l’ordre d’insertion. Contrôle : 30 000 par cas. Temps en microsecondes.
+
+#table(columns: (1.3fr, 0.8fr, 1fr, 1fr, 1fr), table.header[*Ordre*][*Hauteur*][*Insertion*][*Recherche*][*Suppression*],
+[Croissant], [5000], [35638.5], [45382.1], [173.0],
+[Décroissant], [5000], [62306.4], [50787.4], [247.0],
+[Aléatoire], [29], [782.4], [353.7], [718.4],
+[Médianes], [13], [496.6], [88.4], [316.6],
+[Presque trié], [916], [3539.2], [5030.8], [368.1],
+)
+
+Dans les cas triés, la suppression dans l’ordre d’insertion retire successivement la racine : ses temps ne représentent pas toutes les séquences possibles. Les arbres non équilibrés ont hauteur 5 000 ; l’ordre médian donne une hauteur de 13.
+
+#pagebreak()
+= Annexe : code source complet
+
+== ABR et comparaison avec la bibliothèque standard
+
+#raw(read("../bst.cpp"), block: true, lang: "cpp")
+
+== Effet de l'ordre d'insertion
+
+#raw(read("../order_benchmark.cpp"), block: true, lang: "cpp")
