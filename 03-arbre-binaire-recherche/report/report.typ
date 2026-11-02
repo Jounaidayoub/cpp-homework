@@ -323,13 +323,3 @@ L’ordre d’insertion modifie fortement la hauteur. La mesure suivante utilise
 
 Dans les cas triés, la suppression dans l’ordre d’insertion retire successivement la racine : ses temps ne représentent pas toutes les séquences possibles. Les arbres non équilibrés ont hauteur 5 000 ; l’ordre médian donne une hauteur de 13.
 
-#pagebreak()
-= Annexe : code source complet
-
-== ABR et comparaison avec la bibliothèque standard
-
-#raw(read("../bst.cpp"), block: true, lang: "cpp")
-
-== Effet de l'ordre d'insertion
-
-#raw(read("../order_benchmark.cpp"), block: true, lang: "cpp")

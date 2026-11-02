@@ -235,7 +235,3 @@ Moyenne de trois exécutions, graine 2026 ; les temps sont en millisecondes. Cha
 
 La lecture répétée de la même racine peut être optimisée par le compilateur ; les valeurs de top ne suffisent pas à comparer les implémentations. Les mesures dépendent de la charge de la machine.
 
-#pagebreak()
-= Annexe : code source complet
-
-#raw(read("../heap_benchmark.cpp"), block: true, lang: "cpp")
